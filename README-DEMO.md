@@ -1,17 +1,12 @@
-# Location El hadja — mode démo sans Supabase
+# Location El Hadja — mode démo local
 
-Cette version fonctionne sans Supabase et sans variable secrète. Les données sont stockées dans `localStorage` du navigateur.
+Cette version fonctionne sans Supabase. Les données sont stockées dans le navigateur avec localStorage.
 
 ## GitHub Pages
-1. Envoie tous les fichiers de ce dossier sur la branche `main`.
-2. GitHub > Settings > Pages > Source : **GitHub Actions**.
-3. Ouvre l'onglet Actions et attends que `Deploy PWA demo to GitHub Pages` soit vert.
-4. Ouvre l'URL Pages fournie par GitHub.
 
-## Données
-Tu peux ajouter, modifier et supprimer des véhicules, opérations financières et maintenances. Les changements restent dans le navigateur utilisé.
+1. Remplace complètement les fichiers de ton dépôt par ceux de cette archive. Ne copie pas seulement par-dessus une ancienne version.
+2. Vérifie qu'il n'existe plus de fichier `src/supabase.ts` dans GitHub.
+3. Dans Settings > Pages, choisis GitHub Actions.
+4. Fais un commit/push : le workflow `.github/workflows/deploy-pages.yml` construit et publie `dist`.
 
-Le bouton **Réinitialiser la démo** remet les données fictives initiales.
-
-## Notifications
-Dans Maintenance, **Tester une notification** utilise une notification locale du navigateur. Les vraies notifications automatiques seront branchées lors du passage à Supabase.
+Aucun secret ni variable Supabase n'est nécessaire en mode démo.
