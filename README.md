@@ -313,3 +313,6 @@ iPhone / Android / Windows
 ## Sécurité importante
 
 Le frontend ne contient que des clés publiques. Les permissions sont contrôlées par Supabase RLS. Les secrets privilégiés (`service_role`, VAPID privée, CRON_SECRET) restent côté Supabase uniquement.
+
+
+> Pour visualiser l'interface sans Supabase, utiliser cette version en **mode démo local**. Voir `README-DEMO.md`. Aucun secret GitHub n'est nécessaire dans cette version.
