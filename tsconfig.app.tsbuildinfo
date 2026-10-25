@@ -1,1 +1,0 @@
-{"root":["./src/App.tsx","./src/demoStore.ts","./src/main.tsx","./src/supabase.ts","./src/types.ts","./src/vite-env.d.ts","./src/components/Shell.tsx","./src/pages/Dashboard.tsx","./src/pages/Finances.tsx","./src/pages/Login.tsx","./src/pages/Maintenance.tsx","./src/pages/Vehicles.tsx"],"errors":true,"version":"5.8.3"}
