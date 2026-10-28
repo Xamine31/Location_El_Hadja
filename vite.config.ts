@@ -1,3 +1,11 @@
-import {defineConfig} from 'vite'
+
+import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
-export default defineConfig({plugins:[react()],base:process.env.GITHUB_REPOSITORY?.split('/')[1]?`/${process.env.GITHUB_REPOSITORY.split('/')[1]}/`:'/',build:{sourcemap:false}})
+
+export default defineConfig({
+  plugins: [react()],
+  base: '/Location_El_Hadja/',
+  build: {
+    sourcemap: false,
+  },
+})
