@@ -1,4 +1,4 @@
-const VERSION = 'elh-v2';
+const VERSION = 'elh-v3';
 const APP_CACHE = `${VERSION}-app`;
 const APP_SHELL = ['./', './index.html', './manifest.webmanifest', './logo.png', './icons/icon-192.png', './icons/icon-512.png'];
 

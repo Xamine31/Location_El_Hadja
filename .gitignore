@@ -7,5 +7,4 @@ dist
 *.log
 .supabase
 
-# TypeScript build cache
 *.tsbuildinfo
