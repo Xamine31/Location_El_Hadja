@@ -1,6 +1,5 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.4';
 const C=window.ELHADJA_CONFIG||{}, ready=/^https:\/\/.+\.supabase\.co$/.test(C.SUPABASE_URL||'')&&!String(C.SUPABASE_ANON_KEY||'').startsWith('REMPLACER');
-const db=ready?createClient(C.SUPABASE_URL,C.SUPABASE_ANON_KEY):null;
+let db=null;
 const root=document.querySelector('#app');let user=null,vehicles=[],maintenance=[],revenues=[],expenses=[],message='';
 const fmt=n=>new Intl.NumberFormat('fr-DZ',{maximumFractionDigits:2}).format(Number(n||0))+' DA';
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -13,7 +12,7 @@ const flash=t=>{message=t;render()};
 const notifyError=e=>flash('Erreur : '+(e?.message||e));
 function choices(selected='',all=false){return `${all?'<option value="">Tous les véhicules</option>':'<option value="">Sélectionner le véhicule</option>'}`+vehicles.map(v=>`<option value="${v.id}" ${v.id===selected?'selected':''}>${esc(labelCar(v.id))}</option>`).join('')}
 function nav(){let rr=route();return [['/dashboard','◈','Tableau de bord'],['/vehicles','🚘','Véhicules'],['/maintenance','🔧','Maintenance'],['/finances','◉','Finances']].map(([path,ic,t])=>`<a href="#${path}" class="${rr.startsWith(path)?'active':''}"><span>${ic}</span>${t}</a>`).join('')}
-function shell(html){root.innerHTML=`<div class="layout"><aside class="side"><div class="brand"><img src="./icons/icon-192.png" alt=""><span>Location<br>El hadja</span></div><nav class="nav">${nav()}</nav></aside><main class="main">${message?`<div class="notice">${esc(message)}</div>`:''}${html}</main></div><nav class="mobile-nav">${nav()}</nav>`;message='';bind()}
+function shell(html){root.innerHTML=`<div class="layout"><aside class="side"><div class="brand"><img src="./icons/icon-192.png" alt=""><span>Location<br>El hadja</span></div><nav class="nav">${nav()}</nav></aside><main class="main">${message?`<div class="notice">${esc(message)}</div>`:''}${html}<div class="account-foot">Connecté : ${esc(user?.email||'')} · <button class="link-btn" id="logout-btn" type="button">Se déconnecter</button></div></main></div><nav class="mobile-nav">${nav()}</nav>`;message='';bind();let logout=document.getElementById('logout-btn');if(logout)logout.onclick=async()=>{if(!confirm('Se déconnecter sur cet appareil ?'))return;await db.auth.signOut();user=null;vehicles=[];maintenance=[];revenues=[];expenses=[];showLogin()}}
 function loading(text='Ouverture de votre espace…'){root.innerHTML=`<main class="center"><div class="auth panel"><img src="./logo.png" alt="Location El hadja"><h2 style="text-align:center">Location El hadja</h2><p class="muted" style="text-align:center">${esc(text)}</p></div></main>`}
 
 async function load(){if(!user)return;const tables=['vehicles','maintenance','revenues','expenses'];const results=await Promise.all(tables.map(t=>db.from(t).select('*').order('created_at',{ascending:false})));for(let i=0;i<tables.length;i++){if(results[i].error)throw results[i].error;window[tables[i]] = results[i].data||[]}vehicles=window.vehicles;maintenance=window.maintenance;revenues=window.revenues;expenses=window.expenses}
@@ -32,24 +31,43 @@ function bind(){document.querySelectorAll('[data-go]').forEach(b=>b.onclick=()=>
 
 function toUint8(s){const p='='.repeat((4-s.length%4)%4),raw=atob((s+p).replace(/-/g,'+').replace(/_/g,'/'));return Uint8Array.from([...raw].map(c=>c.charCodeAt(0)))}
 async function subscribePush(){try{if(!C.VAPID_PUBLIC_KEY)throw Error('Ajoutez VAPID_PUBLIC_KEY à config.js pour activer les push');if(!('serviceWorker'in navigator)||!('PushManager'in window))throw Error('Push indisponible sur ce navigateur');if(Notification.permission==='denied')throw Error('Notifications bloquées dans les réglages');const reg=await navigator.serviceWorker.ready;const sub=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:toUint8(C.VAPID_PUBLIC_KEY)}),data=sub.toJSON();const {error}=await db.from('push_subscriptions').upsert({user_id:user.id,endpoint:data.endpoint,p256dh:data.keys.p256dh,auth:data.keys.auth,user_agent:navigator.userAgent},{onConflict:'endpoint'});if(error)throw error;flash('Notifications activées. L’envoi automatique nécessite la fonction et le Cron Supabase.')}catch(e){notifyError(e)}}
-async function init(){
-  if('serviceWorker'in navigator)navigator.serviceWorker.register('./sw.js').catch(console.warn);
-  window.addEventListener('hashchange',render);
-  if(!db){render();return}
-  loading();
-  try{
-    let {data,error}=await db.auth.getSession();
-    if(error)throw error;
-    if(!data.session){
-      const result=await db.auth.signInAnonymously();
-      if(result.error)throw result.error;
-      data={session:result.data.session};
-    }
-    user=data.session?.user||null;
-    if(!user)throw Error('Impossible de créer la session anonyme.');
-    await load();render();
-  }catch(e){
-    root.innerHTML=`<main class="center"><div class="auth panel"><h2>Connexion impossible</h2><p>${esc(e.message||e)}</p><p class="muted">Activez les connexions anonymes dans Supabase → Authentication → Providers → Anonymous Sign-Ins, puis rechargez la page.</p><button class="btn primary" onclick="location.reload()">Réessayer</button></div></main>`;
+function showLogin(status=''){
+  user=null;
+  root.innerHTML=`<main class="center"><div class="auth panel"><img src="./logo.png" alt="Location El hadja"><h2>Accéder à Location El hadja</h2><p class="muted">Utilisez la même adresse e-mail sur votre iPhone, PC et Android. Aucun mot de passe à retenir.</p>${status?`<div class="notice">${esc(status)}</div>`:''}<form id="login-form" class="login-form"><div class="field"><label for="login-email">Adresse e-mail</label><input id="login-email" name="email" type="email" autocomplete="email" placeholder="vous@exemple.com" required></div><button class="btn primary" type="submit">Recevoir un lien de connexion</button></form><p class="muted">Première connexion : vérifiez votre boîte mail. Ensuite la session reste mémorisée sur cet appareil.</p></div></main>`;
+  document.querySelector('#login-form').onsubmit=async e=>{
+    e.preventDefault();
+    const btn=e.currentTarget.querySelector('button');const email=e.currentTarget.email.value.trim();
+    btn.disabled=true;btn.textContent='Envoi en cours…';
+    try{
+      const redirectTo=location.origin+location.pathname;
+      const {error}=await db.auth.signInWithOtp({email,options:{emailRedirectTo:redirectTo}});
+      if(error)throw error;
+      showLogin('Un lien de connexion a été envoyé si cette adresse peut recevoir des e-mails. Ouvrez-le sur l’appareil que vous souhaitez connecter.');
+    }catch(err){showLogin('Envoi impossible : '+(err.message||err))}
   }
+}
+function fatal(err){
+  console.error('Démarrage Location El hadja :',err);
+  root.innerHTML=`<main class="center"><div class="auth panel"><h2>Impossible de démarrer</h2><div class="notice">${esc(err?.message||err)}</div><p class="muted">Vérifiez config.js, la connexion Internet, les URLs de redirection autorisées dans Supabase et le script SQL installé.</p><button class="btn primary" onclick="location.reload()">Réessayer</button></div></main>`;
+}
+async function init(){
+  if('serviceWorker' in navigator)navigator.serviceWorker.register('./sw.js').catch(console.warn);
+  window.addEventListener('hashchange',()=>{if(user)render()});
+  if(!ready){render();return}
+  loading('Vérification de la session…');
+  try{
+    const {createClient}=await import('https://esm.sh/@supabase/supabase-js@2.49.4');
+    db=createClient(C.SUPABASE_URL,C.SUPABASE_ANON_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
+    const {data,error}=await db.auth.getSession();
+    if(error)throw error;
+    if(!data.session){showLogin();return}
+    if(data.session.user?.is_anonymous){await db.auth.signOut();showLogin('Pour partager les mêmes données entre appareils, connectez-vous avec votre adresse e-mail.');return}
+    user=data.session.user;
+    await load();render();
+    db.auth.onAuthStateChange((event,session)=>{
+      if(event==='SIGNED_OUT'){user=null;showLogin()}
+      if(event==='SIGNED_IN'&&session?.user&&!user){user=session.user;setTimeout(()=>load().then(render).catch(fatal),0)}
+    });
+  }catch(err){fatal(err)}
 }
 init();
