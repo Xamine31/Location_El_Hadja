@@ -24,15 +24,19 @@ Le projet utilise `HashRouter`, compatible avec GitHub Pages même pour `/Locati
 
 **Attention :** `002_cleanup.sql` utilise `pg_cron`. Si cette extension n'est pas disponible sur ton plan/projet, la requête de programmation peut échouer. Dans ce cas, faire exécuter chaque jour `select public.purge_completed_maintenance();` par un mécanisme Cron Supabase autorisé. La suppression des 7 jours n'est garantie qu'une fois le job activé.
 
-## 3. Secrets GitHub Actions (pas Supabase service_role !)
+## 3. Configuration directe dans le dépôt GitHub
 
-Dans `Settings → Secrets and variables → Actions → New repository secret` :
+Dans le fichier `.env.production` à la racine du dépôt, remplacer les valeurs d’exemple :
 
-- `VITE_SUPABASE_URL` = `https://xxxxx.supabase.co`
-- `VITE_SUPABASE_ANON_KEY` = clé **publique** Supabase
-- `VITE_VAPID_PUBLIC_KEY` = clé publique VAPID, quand les push seront activés (optionnel pour faire fonctionner véhicules/finances/maintenance).
+```dotenv
+VITE_SUPABASE_URL=https://TON-PROJET.supabase.co
+VITE_SUPABASE_ANON_KEY=TA_CLE_PUBLIQUE_ANON_OU_PUBLISHABLE
+VITE_VAPID_PUBLIC_KEY=
+```
 
-La clé `service_role` et la clé **privée** VAPID ne doivent **jamais** entrer dans les secrets commençant par `VITE_`.
+Ces variables sont publiques dans une application Vite : n'y insérer **aucune clé `service_role`**, clé secrète Supabase, mot de passe ou clé privée VAPID. Les politiques RLS doivent être en place.
+
+Le workflow GitHub Actions a été modifié pour exécuter `npm run build` **sans secrets GitHub** : Vite lira `.env.production` automatiquement.
 
 Dans `Settings → Pages`, choisir **GitHub Actions**. Vérifier ensuite dans `Actions` que le workflow passe au vert.
 
